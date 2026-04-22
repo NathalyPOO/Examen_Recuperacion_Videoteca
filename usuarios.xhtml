@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui">
+
+<h:head>
+    <title>Videoteca - Administración de Usuarios</title>
+    <meta charset="UTF-8"/>
+    <h:outputStylesheet library="css" name="styles.css"/>
+</h:head>
+
+<h:body>
+
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <div class="navbar-brand">
+            <i class="pi pi-video"></i> VideoTeca
+        </div>
+        <div class="navbar-user">
+            <i class="pi pi-user"></i>
+            <span>Bienvenido, <strong>#{sessionBean.nombreUsuario}</strong></span>
+        </div>
+        <div class="navbar-menu">
+            <h:link value="Usuarios" outcome="/admin/usuarios" styleClass="nav-link active"/>
+            <h:link value="Gestión Videos" outcome="/videos/videos" styleClass="nav-link"/>
+            <h:form style="display:inline">
+                <p:commandButton value="Cerrar Sesión"
+                                 action="#{usuariosBean.cerrarSesion}"
+                                 icon="pi pi-sign-out"
+                                 styleClass="logout-btn"
+                                 ajax="false"/>
+            </h:form>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="page-header">
+            <h2><i class="pi pi-users"></i> Administración de Usuarios</h2>
+        </div>
+
+        <p:messages id="mensajes" showDetail="true" closable="true"/>
+
+        <!-- Botón para abrir modal de crear usuario -->
+        <h:form>
+            <p:commandButton value="Nuevo Usuario"
+                             icon="pi pi-plus"
+                             styleClass="btn-primary mb-3"
+                             onclick="PF('dlgNuevo').show()"
+                             type="button"/>
+
+            <!-- TABLA DE USUARIOS (DataTable) -->
+            <p:dataTable id="tablaUsuarios"
+                         value="#{usuariosBean.listaUsuarios}"
+                         var="u"
+                         paginator="true"
+                         rows="10"
+                         styleClass="usuarios-table"
+                         emptyMessage="No hay usuarios registrados"
+                         rowHover="true"
+                         stripedRows="true">
+
+                <f:facet name="header">Lista de Usuarios</f:facet>
+
+                <p:column headerText="ID" style="width:60px; text-align:center">
+                    <h:outputText value="#{u.id}"/>
+                </p:column>
+
+                <p:column headerText="Nombre">
+                    <h:outputText value="#{u.nombre}"/>
+                </p:column>
+
+                <p:column headerText="Usuario">
+                    <h:outputText value="#{u.usuario}"/>
+                </p:column>
+
+                <p:column headerText="Contraseña">
+                    <h:outputText value="••••••••"/>
+                </p:column>
+
+                <p:column headerText="Acciones" style="width:160px; text-align:center">
+                    <!-- Editar -->
+                    <p:commandButton icon="pi pi-pencil"
+                                     styleClass="btn-edit mr-1"
+                                     title="Editar"
+                                     update=":formEditar"
+                                     oncomplete="PF('dlgEditar').show()"
+                                     action="#{usuariosBean.prepararEdicion(u)}"/>
+                    <!-- Eliminar con confirmación -->
+                    <p:commandButton icon="pi pi-trash"
+                                     styleClass="btn-delete"
+                                     title="Eliminar"
+                                     action="#{usuariosBean.eliminarUsuario(u)}"
+                                     update=":mensajes tablaUsuarios"
+                                     onclick="return confirm('¿Seguro que deseas eliminar este usuario?')"/>
+                </p:column>
+            </p:dataTable>
+        </h:form>
+
+        <!-- MODAL: Crear Usuario -->
+        <p:dialog header="Nuevo Usuario"
+                  widgetVar="dlgNuevo"
+                  modal="true"
+                  resizable="false"
+                  styleClass="custom-dialog"
+                  style="width:450px">
+            <h:form id="formNuevo">
+                <p:messages id="msgNuevo" showDetail="true"/>
+
+                <div class="field">
+                    <p:outputLabel for="nuevoNombre" value="Nombre Completo *"/>
+                    <p:inputText id="nuevoNombre"
+                                 value="#{usuariosBean.nuevoUsuario.nombre}"
+                                 required="true"
+                                 styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="nuevoUsuario" value="Usuario *"/>
+                    <p:inputText id="nuevoUsuario"
+                                 value="#{usuariosBean.nuevoUsuario.usuario}"
+                                 required="true"
+                                 styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="nuevaContrasena" value="Contraseña *"/>
+                    <p:password id="nuevaContrasena"
+                                value="#{usuariosBean.nuevoUsuario.contrasena}"
+                                required="true"
+                                feedback="true"
+                                styleClass="w-full"/>
+                </div>
+
+                <div class="dialog-footer">
+                    <p:commandButton value="Guardar"
+                                     icon="pi pi-save"
+                                     action="#{usuariosBean.guardarUsuario}"
+                                     update=":mensajes :tablaUsuarios msgNuevo"
+                                     oncomplete="if(!args.validationFailed) PF('dlgNuevo').hide()"
+                                     styleClass="btn-primary"/>
+                    <p:commandButton value="Cancelar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('dlgNuevo').hide()"
+                                     styleClass="btn-secondary"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- MODAL: Editar Usuario -->
+        <p:dialog header="Editar Usuario"
+                  widgetVar="dlgEditar"
+                  modal="true"
+                  resizable="false"
+                  styleClass="custom-dialog"
+                  style="width:450px">
+            <h:form id="formEditar">
+                <p:messages id="msgEditar" showDetail="true"/>
+
+                <div class="field">
+                    <p:outputLabel for="editNombre" value="Nombre Completo *"/>
+                    <p:inputText id="editNombre"
+                                 value="#{usuariosBean.usuarioSeleccionado.nombre}"
+                                 required="true"
+                                 styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="editUsuario" value="Usuario *"/>
+                    <p:inputText id="editUsuario"
+                                 value="#{usuariosBean.usuarioSeleccionado.usuario}"
+                                 required="true"
+                                 styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="editContrasena" value="Contraseña *"/>
+                    <p:password id="editContrasena"
+                                value="#{usuariosBean.usuarioSeleccionado.contrasena}"
+                                required="true"
+                                feedback="false"
+                                styleClass="w-full"/>
+                </div>
+
+                <div class="dialog-footer">
+                    <p:commandButton value="Actualizar"
+                                     icon="pi pi-save"
+                                     action="#{usuariosBean.actualizarUsuario}"
+                                     update=":mensajes :tablaUsuarios msgEditar"
+                                     oncomplete="if(!args.validationFailed) PF('dlgEditar').hide()"
+                                     styleClass="btn-primary"/>
+                    <p:commandButton value="Cancelar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('dlgEditar').hide()"
+                                     styleClass="btn-secondary"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </div>
+</h:body>
+</html>

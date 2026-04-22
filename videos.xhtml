@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui">
+
+<h:head>
+    <title>Videoteca - Gestión de Videos</title>
+    <meta charset="UTF-8"/>
+    <h:outputStylesheet library="css" name="styles.css"/>
+</h:head>
+
+<h:body>
+
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <div class="navbar-brand">
+            <i class="pi pi-video"></i> VideoTeca
+        </div>
+        <div class="navbar-user">
+            <i class="pi pi-user"></i>
+            <span>Bienvenido, <strong>#{sessionBean.nombreUsuario}</strong></span>
+        </div>
+        <div class="navbar-menu">
+            <h:link value="Usuarios" outcome="/admin/usuarios" styleClass="nav-link"/>
+            <h:link value="Gestión Videos" outcome="/videos/videos" styleClass="nav-link active"/>
+            <h:form style="display:inline">
+                <p:commandButton value="Cerrar Sesión"
+                                 action="#{videosBean.cerrarSesion}"
+                                 icon="pi pi-sign-out"
+                                 styleClass="logout-btn"
+                                 ajax="false"/>
+            </h:form>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="page-header">
+            <h2><i class="pi pi-video"></i> Gestión de Videos</h2>
+        </div>
+
+        <p:messages id="mensajes" showDetail="true" closable="true"/>
+
+        <h:form id="formVideos">
+
+            <!-- Barra de herramientas: Filtro por año + Nuevo Video -->
+            <div class="toolbar">
+                <div class="filter-group">
+                    <p:outputLabel for="calFiltro" value="Filtrar por año:"/>
+                    <!-- p:calendar para seleccionar el año de publicación -->
+                    <p:calendar id="calFiltro"
+                                value="#{videosBean.fechaFiltro}"
+                                pattern="yyyy"
+                                view="year"
+                                placeholder="Seleccionar año"
+                                styleClass="calendar-input"/>
+                    <p:commandButton value="Filtrar"
+                                     icon="pi pi-search"
+                                     action="#{videosBean.filtrarPorAnio}"
+                                     update="dataViewVideos mensajes"
+                                     styleClass="btn-filter"/>
+                    <p:commandButton value="Ver Todos"
+                                     icon="pi pi-refresh"
+                                     action="#{videosBean.limpiarFiltro}"
+                                     update="dataViewVideos mensajes"
+                                     styleClass="btn-secondary"/>
+                </div>
+                <p:commandButton value="Nuevo Video"
+                                 icon="pi pi-plus"
+                                 onclick="PF('dlgNuevoVideo').show()"
+                                 type="button"
+                                 styleClass="btn-primary"/>
+            </div>
+
+            <!-- ===== p:dataView como CARDS ===== -->
+            <p:dataView id="dataViewVideos"
+                        value="#{videosBean.listaVideos}"
+                        var="v"
+                        layout="grid"
+                        styleClass="videos-dataview"
+                        emptyMessage="No hay videos registrados">
+
+                <f:facet name="header">
+                    Biblioteca de Videos
+                </f:facet>
+
+                <!-- Vista GRID (cards) -->
+                <p:dataViewGridItem>
+                    <div class="video-card">
+                        <!-- Preview imagen del video -->
+                        <div class="video-thumbnail">
+                            <h:graphicImage value="#{not empty v.imagenPreview ? v.imagenPreview : '/resources/img/no-preview.png'}"
+                                            alt="#{v.titulo}"
+                                            styleClass="thumbnail-img"
+                                            onerror="this.src='https://via.placeholder.com/320x180?text=Sin+Preview'"/>
+                            <div class="video-overlay">
+                                <!-- Botón para ver video en modal -->
+                                <p:commandButton icon="pi pi-play"
+                                                 styleClass="btn-play"
+                                                 title="Ver Video"
+                                                 action="#{videosBean.prepararVisualizacion(v)}"
+                                                 update=":formModalVideo"
+                                                 oncomplete="PF('dlgVerVideo').show()"/>
+                            </div>
+                        </div>
+                        <div class="video-info">
+                            <h3 class="video-titulo">#{v.titulo}</h3>
+                            <p class="video-meta">
+                                <i class="pi pi-user"></i> #{v.autor}
+                            </p>
+                            <p class="video-meta">
+                                <i class="pi pi-calendar"></i> #{v.anio}
+                                &nbsp;|&nbsp;
+                                <i class="pi pi-tag"></i> #{v.tema}
+                            </p>
+                        </div>
+                        <div class="video-actions">
+                            <p:commandButton icon="pi pi-pencil"
+                                             styleClass="btn-edit"
+                                             title="Editar"
+                                             action="#{videosBean.prepararEdicion(v)}"
+                                             update=":formEditarVideo"
+                                             oncomplete="PF('dlgEditarVideo').show()"/>
+                            <p:commandButton icon="pi pi-trash"
+                                             styleClass="btn-delete"
+                                             title="Eliminar"
+                                             action="#{videosBean.eliminarVideo(v)}"
+                                             update="dataViewVideos :mensajes"
+                                             onclick="return confirm('¿Eliminar este video?')"/>
+                        </div>
+                    </div>
+                </p:dataViewGridItem>
+            </p:dataView>
+        </h:form>
+
+        <!-- ===== MODAL: Ver Video con p:video ===== -->
+        <p:dialog header="#{videosBean.videoSeleccionado.titulo}"
+                  widgetVar="dlgVerVideo"
+                  modal="true"
+                  resizable="true"
+                  styleClass="custom-dialog video-dialog"
+                  style="width:700px">
+            <h:form id="formModalVideo">
+                <div class="video-modal-content">
+                    <!-- p:video para mostrar el video en modal -->
+                    <p:video value="#{videosBean.videoSeleccionado.url}"
+                             player="flash"
+                             styleClass="modal-video"
+                             style="width:100%; height:380px">
+                        <f:param name="allowfullscreen" value="true"/>
+                    </p:video>
+
+                    <div class="video-modal-info">
+                        <p><strong>Autor:</strong> #{videosBean.videoSeleccionado.autor}</p>
+                        <p><strong>Año:</strong> #{videosBean.videoSeleccionado.anio}</p>
+                        <p><strong>Tema:</strong> #{videosBean.videoSeleccionado.tema}</p>
+                        <p>
+                            <strong>URL: </strong>
+                            <a href="#{videosBean.videoSeleccionado.url}"
+                               target="_blank">Ver en YouTube</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="dialog-footer">
+                    <p:commandButton value="Cerrar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('dlgVerVideo').hide()"
+                                     styleClass="btn-secondary"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- MODAL: Nuevo Video -->
+        <p:dialog header="Registrar Nuevo Video"
+                  widgetVar="dlgNuevoVideo"
+                  modal="true"
+                  resizable="false"
+                  styleClass="custom-dialog"
+                  style="width:500px">
+            <h:form id="formNuevoVideo">
+                <p:messages id="msgNuevo" showDetail="true"/>
+
+                <div class="field">
+                    <p:outputLabel for="nuevoTitulo" value="Título *"/>
+                    <p:inputText id="nuevoTitulo"
+                                 value="#{videosBean.nuevoVideo.titulo}"
+                                 required="true" styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="nuevoAutor" value="Autor *"/>
+                    <p:inputText id="nuevoAutor"
+                                 value="#{videosBean.nuevoVideo.autor}"
+                                 required="true" styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="nuevoAnio" value="Año de Publicación *"/>
+                    <!-- p:calendar para seleccionar el año -->
+                    <p:calendar id="nuevoAnio"
+                                value="#{videosBean.nuevoVideo.anio}"
+                                pattern="yyyy"
+                                view="year"
+                                converterMessage="Año inválido"
+                                required="true"
+                                styleClass="w-full">
+                        <f:convertNumber integerOnly="true"/>
+                    </p:calendar>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="nuevoTema" value="Tema *"/>
+                    <p:inputText id="nuevoTema"
+                                 value="#{videosBean.nuevoVideo.tema}"
+                                 required="true" styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="nuevoUrl" value="URL del Video *"/>
+                    <p:inputText id="nuevoUrl"
+                                 value="#{videosBean.nuevoVideo.url}"
+                                 required="true" styleClass="w-full"
+                                 placeholder="https://www.youtube.com/watch?v=..."/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="nuevoImagen" value="URL Preview (imagen)"/>
+                    <p:inputText id="nuevoImagen"
+                                 value="#{videosBean.nuevoVideo.imagenPreview}"
+                                 styleClass="w-full"
+                                 placeholder="https://img.youtube.com/vi/.../hqdefault.jpg"/>
+                </div>
+
+                <div class="dialog-footer">
+                    <p:commandButton value="Guardar"
+                                     icon="pi pi-save"
+                                     action="#{videosBean.guardarVideo}"
+                                     update=":mensajes :formVideos:dataViewVideos msgNuevo"
+                                     oncomplete="if(!args.validationFailed) PF('dlgNuevoVideo').hide()"
+                                     styleClass="btn-primary"/>
+                    <p:commandButton value="Cancelar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('dlgNuevoVideo').hide()"
+                                     styleClass="btn-secondary"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- MODAL: Editar Video -->
+        <p:dialog header="Editar Video"
+                  widgetVar="dlgEditarVideo"
+                  modal="true"
+                  resizable="false"
+                  styleClass="custom-dialog"
+                  style="width:500px">
+            <h:form id="formEditarVideo">
+                <p:messages id="msgEditar" showDetail="true"/>
+
+                <div class="field">
+                    <p:outputLabel for="editTitulo" value="Título *"/>
+                    <p:inputText id="editTitulo"
+                                 value="#{videosBean.videoSeleccionado.titulo}"
+                                 required="true" styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="editAutor" value="Autor *"/>
+                    <p:inputText id="editAutor"
+                                 value="#{videosBean.videoSeleccionado.autor}"
+                                 required="true" styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="editAnio" value="Año *"/>
+                    <p:inputNumber id="editAnio"
+                                   value="#{videosBean.videoSeleccionado.anio}"
+                                   required="true"
+                                   min="1900"
+                                   max="2100"
+                                   styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="editTema" value="Tema *"/>
+                    <p:inputText id="editTema"
+                                 value="#{videosBean.videoSeleccionado.tema}"
+                                 required="true" styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="editUrl" value="URL del Video *"/>
+                    <p:inputText id="editUrl"
+                                 value="#{videosBean.videoSeleccionado.url}"
+                                 required="true" styleClass="w-full"/>
+                </div>
+                <div class="field">
+                    <p:outputLabel for="editImagen" value="URL Preview"/>
+                    <p:inputText id="editImagen"
+                                 value="#{videosBean.videoSeleccionado.imagenPreview}"
+                                 styleClass="w-full"/>
+                </div>
+
+                <div class="dialog-footer">
+                    <p:commandButton value="Actualizar"
+                                     icon="pi pi-save"
+                                     action="#{videosBean.actualizarVideo}"
+                                     update=":mensajes :formVideos:dataViewVideos msgEditar"
+                                     oncomplete="if(!args.validationFailed) PF('dlgEditarVideo').hide()"
+                                     styleClass="btn-primary"/>
+                    <p:commandButton value="Cancelar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('dlgEditarVideo').hide()"
+                                     styleClass="btn-secondary"/>
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </div>
+</h:body>
+</html>
